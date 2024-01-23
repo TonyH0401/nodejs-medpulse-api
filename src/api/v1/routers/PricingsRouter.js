@@ -1,13 +1,28 @@
 const router = require("express").Router();
 const createError = require("http-errors");
-// Custom Utils::
+// Custom Utils:
 // Custom Middlewares:
+const {
+  inputDataExist,
+  inputPricingsValidation,
+  createNewPricing,
+  getAllPricing,
+  getPricingById,
+  deletePricingById,
+  updatePricingById,
+} = require("../middlewares/PricingsMiddlewares");
 // Pricings Routers:
-router.route("/").get((req, res) => {
-  return res.status(200).json({
-    success: true,
-  });
-});
+//
+router
+  .route("/pricing")
+  .get(getAllPricing)
+  .post(inputDataExist, inputPricingsValidation, createNewPricing);
+//
+router
+  .route("/pricing/:pricingId")
+  .get(getPricingById)
+  .patch(updatePricingById)
+  .delete(deletePricingById);
 // Pricings Error Handling:
 router
   .use((req, res, next) => {
