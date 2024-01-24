@@ -2,13 +2,16 @@ const router = require("express").Router();
 const createError = require("http-errors");
 // Custom Utils:
 // Custom Middlewares:
+const {
+  isContentInputEmpty,
+  createContentsFileMulter,
+  createContent,
+} = require("../middlewares/ContentsMiddlewares");
 // Contents Routers:
 //
-router.route("/").get((req, res) => {
-  return res.status(200).json({
-    code: 1,
-  });
-});
+router
+  .route("/")
+  .post(createContentsFileMulter, isContentInputEmpty, createContent);
 // Contents Error Handling:
 router
   .use((req, res, next) => {

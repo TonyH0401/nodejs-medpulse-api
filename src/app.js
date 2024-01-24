@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const bodyParser = require("body-parser");
 const createError = require("http-errors");
 const path = require("path");
 // Custom Utils:
@@ -11,6 +12,9 @@ const port = process.env.API_PORT || 8080;
 const app = express();
 // App Use:
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(reqLoggerDev);
 // Default Route:
 app.get("/", (req, res) => {

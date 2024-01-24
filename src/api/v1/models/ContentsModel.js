@@ -4,10 +4,10 @@ const Schema = require("mongoose").Schema;
 const ContentsModel = new Schema(
   {
     contentCaption: { type: String },
-    contentBody: { type: Number },
-    contentImage: { type: String },
+    contentBody: { type: String },
+    contentImageUrl: { type: String, default: "" },
   },
   { timestamps: true }
 );
 // Exports:
-module.exports = mongoose.model("PricingsModel", PricingsModel);
+module.exports = mongoose.model("ContentsModel", ContentsModel);
