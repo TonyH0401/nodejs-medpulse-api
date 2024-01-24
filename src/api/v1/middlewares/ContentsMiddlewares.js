@@ -11,7 +11,10 @@ const {
   fileSize5mb,
 } = require("../../../utils/multerOptions");
 const { isPathExist, createPath } = require("../../../utils/fileHandling");
-const { cloudinaryUploader } = require("../../../utils/cloudinary");
+const {
+  cloudinaryUploader,
+  cloudinaryDestroy,
+} = require("../../../utils/cloudinary");
 // Custom Middlewares:
 // Import Models:
 const ContentsModel = require("../models/ContentsModel");
@@ -87,3 +90,69 @@ module.exports.createContent = async (req, res, next) => {
     fse.removeSync(filePath);
   }
 };
+// Get All Contents:
+module.exports.getAllContents = async (req, res, next) => {
+  try {
+    const allContents = await ContentsModel.find({});
+    return res.status(200).json({
+      code: 1,
+      success: true,
+      message: "List of all Contents!",
+      total: allContents.length,
+      data: allContents,
+    });
+  } catch (error) {
+    return next(createError(500, error.message));
+  }
+};
+// Get Content by Id:
+module.exports.getContentById = async (req, res, next) => {
+  const { contentId } = req.params;
+  try {
+    const contentExist = await ContentsModel.findById(contentId);
+    if (!contentExist)
+      return next(createError(404, `ContentId: ${contentId} Not Found!`));
+    return res.status(200).json({
+      code: 1,
+      success: true,
+      message: `ContentId ${contentId} Found!`,
+      data: contentExist,
+    });
+  } catch (error) {
+    return next(createError(500, error.message));
+  }
+};
+// Delete Content By Id: should add enable property, avoid deletion
+module.exports.deleteContentById = async (req, res, next) => {
+  const { contentId } = req.params;
+  try {
+    const contentExisted = await ContentsModel.findById(contentId);
+    if (!contentExisted)
+      return next(createError(404, `Content Id ${contentId} Not Found!`));
+    // delete in database
+    const result = await ContentsModel.findByIdAndDelete(contentId);
+    // get Cloudinary public id if there is imagePublicUrl
+    const imagePublicUrl = contentExisted.contentImageUrl;
+    if (imagePublicUrl) {
+      let urlPart = imagePublicUrl.split("/");
+      let publicId = urlPart[urlPart.length - 1].split(".")[0];
+      // delete in cloudinary if there is imagePublicUrl
+      const cloudDeleteion = await cloudinaryDestroy(publicId);
+      if (!cloudDeleteion.success) {
+        return next(createError(500, cloudDeleteion.message));
+      }
+    }
+    // delete folder
+    const filePath = contentsDefaultDir + contentId;
+    fse.removeSync(filePath);
+    return res.status(200).json({
+      code: 1,
+      success: true,
+      message: `ContentId ${contentId} Deleted!`,
+      data: result,
+    });
+  } catch (error) {
+    return next(createError(500, error.message));
+  }
+};
+

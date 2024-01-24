@@ -6,12 +6,22 @@ const {
   isContentInputEmpty,
   createContentsFileMulter,
   createContent,
+  getAllContents,
+  getContentById,
+  deleteContentById,
 } = require("../middlewares/ContentsMiddlewares");
 // Contents Routers:
 //
 router
   .route("/content")
+  .get(getAllContents)
   .post(createContentsFileMulter, isContentInputEmpty, createContent);
+//
+router
+  .route("/content/:contentId")
+  .get(getContentById)
+  .patch()
+  .delete(deleteContentById);
 // Contents Error Handling:
 router
   .use((req, res, next) => {
