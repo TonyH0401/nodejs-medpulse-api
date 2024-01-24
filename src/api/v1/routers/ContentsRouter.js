@@ -10,7 +10,7 @@ const {
 // Contents Routers:
 //
 router
-  .route("/")
+  .route("/content")
   .post(createContentsFileMulter, isContentInputEmpty, createContent);
 // Contents Error Handling:
 router

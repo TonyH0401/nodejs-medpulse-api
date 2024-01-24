@@ -11,6 +11,7 @@ const {
   fileSize5mb,
 } = require("../../../utils/multerOptions");
 const { isPathExist, createPath } = require("../../../utils/fileHandling");
+const { cloudinaryUploader } = require("../../../utils/cloudinary");
 // Custom Middlewares:
 // Import Models:
 const ContentsModel = require("../models/ContentsModel");
@@ -42,7 +43,7 @@ module.exports.createContentsFileMulter = (req, res, next) => {
     return next();
   });
 };
-// Create new Content:
+// Create New Content:
 module.exports.createContent = async (req, res, next) => {
   const { contentCaption, contentBody } = req.body;
   try {
@@ -51,24 +52,38 @@ module.exports.createContent = async (req, res, next) => {
       contentCaption: contentCaption,
       contentBody: contentBody,
     });
-    let result = await newContent.save();
+    let contentCreated = await newContent.save();
     // create folder for image content
-    const contentId = result._id;
+    const contentId = contentCreated._id;
     const contentPathCreated = await createPath(contentsDefaultDir, contentId);
     // move file from temp dir to main dir
     const filename = res.locals.filename;
     const src = contentsTempDir + filename;
     const dest = contentsDefaultDir + contentId + "/" + filename;
     await fse.move(src, dest);
-    console.log("success!");
+    // upload image to cloudinary
+    const filePath = dest;
+    const cloudinaryResult = await cloudinaryUploader(filePath);
+    if (!cloudinaryResult.success) {
+      return next(createError(500, cloudinaryResult.message));
+    }
+    // update imageUrl to database
+    contentCreated.contentImageUrl = cloudinaryResult.result.url;
+    const result = await contentCreated.save();
+    // delete filename from system
+    // fse.unlinkSync(filePath);
+    res.locals.filePath = filePath;
     // completed
     return res.status(200).json({
       code: 1,
-      folderPath: contentPathCreated,
+      success: true,
+      message: "New Content Created!",
+      data: result,
     });
-    // upload image
-    // update image url
   } catch (error) {
     return next(createError(500, error.message));
+  } finally {
+    const filePath = res.locals.filePath;
+    fse.removeSync(filePath);
   }
 };
