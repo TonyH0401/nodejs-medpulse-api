@@ -32,6 +32,20 @@ async function cloudinaryUploader(filePath) {
     };
   }
 }
-// function cloudinaryDestroy()
+// CLoudinary Destroy:
+async function cloudinaryDestroy(publicId) {
+  try {
+    const result = await cloudinary.uploader.destroy(publicId);
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message,
+    };
+  }
+}
 // Exports:
-module.exports = { cloudinaryUploader };
+module.exports = { cloudinaryUploader, cloudinaryDestroy };
