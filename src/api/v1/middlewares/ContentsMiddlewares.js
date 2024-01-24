@@ -63,6 +63,8 @@ module.exports.createContent = async (req, res, next) => {
     await fse.move(src, dest);
     // upload image to cloudinary
     const filePath = dest;
+    // create filename to delete filename from system, probably move up, next to dest
+    res.locals.filePath = dest;
     const cloudinaryResult = await cloudinaryUploader(filePath);
     if (!cloudinaryResult.success) {
       return next(createError(500, cloudinaryResult.message));
@@ -70,9 +72,6 @@ module.exports.createContent = async (req, res, next) => {
     // update imageUrl to database
     contentCreated.contentImageUrl = cloudinaryResult.result.url;
     const result = await contentCreated.save();
-    // delete filename from system
-    // fse.unlinkSync(filePath);
-    res.locals.filePath = filePath;
     // completed
     return res.status(200).json({
       code: 1,
@@ -83,6 +82,7 @@ module.exports.createContent = async (req, res, next) => {
   } catch (error) {
     return next(createError(500, error.message));
   } finally {
+    // delete file from system
     const filePath = res.locals.filePath;
     fse.removeSync(filePath);
   }
