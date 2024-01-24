@@ -7,7 +7,6 @@ const { isPathExist, createPath } = require("./fileHandling");
 function fileStorage(destinationDir) {
   return multer.diskStorage({
     destination: function (req, file, cb) {
-      // const contentsTempDir = "./src/public/ContentsImagesTemp/";
       const dest = destinationDir;
       // check if temp path exist, if not create it
       fse.ensureDirSync(dest);
