@@ -35,7 +35,7 @@ const imageOnlyFileFilter = function (req, file, callback) {
 };
 // Define File Sizes:
 const fileSize5mb = {
-  fileSize: 1 * 1024 * 1024,
+  fileSize: 5 * 1024 * 1024,
 };
 // Exports:
 module.exports = { fileStorage, imageOnlyFileFilter, fileSize5mb };
