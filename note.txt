@@ -1,1 +1,3 @@
 - cần chuẩn hóa quy trình tạo Content, chuẩn hóa quy trình tạo Content dựa theo quy trình tạo Service, chú ý res.local.path
+- fix res.locals và trường ko upload file, chỉnh thành TH cho phép ko upload file nhưng res.local chỉ nhận khi có file tồn tại
+khi đó ở mỗi res.local cần phải ktr xem có file tồn tại ko, đề xuất tạo 1 biến flag
