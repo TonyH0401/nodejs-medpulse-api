@@ -1,0 +1,1 @@
+- cần chuẩn hóa quy trình tạo Content, chuẩn hóa quy trình tạo Content dựa theo quy trình tạo Service, chú ý res.local.path
