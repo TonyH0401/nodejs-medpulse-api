@@ -8,6 +8,8 @@ const {
   getAllServices,
   getServiceById,
   updateServiceById,
+  deleteServiceById,
+  updateServiceImageById,
 } = require("../middlewares/ServicesMiddlewares");
 // Services Routers:
 //
@@ -15,12 +17,16 @@ router
   .route("/service")
   .get(getAllServices)
   .post(uploadCreateService, createService);
+//
 router
   .route("/service/:serviceId")
   .get(getServiceById)
   .patch(updateServiceById)
-  .delete();
-//   update image
+  .delete(deleteServiceById);
+// update image
+router
+  .route("/service/:serviceId/update-image")
+  .patch(uploadCreateService, updateServiceImageById);
 // Contents Error Handling:
 router
   .use((req, res, next) => {

@@ -170,18 +170,86 @@ module.exports.updateServiceById = async (req, res, next) => {
     return next(createError(500, error.message));
   }
 };
-//
+// Delete Service By Id (this do not delete content because 1 content can be part of multiple service):
 module.exports.deleteServiceById = async (req, res, next) => {
   const { serviceId } = req.params;
   try {
     const serviceExist = await ServicesModel.findById(serviceId);
     if (!serviceExist)
       return next(createError(404, `ServiceId ${serviceId} Not Found!`));
-    
     // delete database
-    // delete cloudinary
-    // delete folder
+    const serviceDeleted = await ServicesModel.findByIdAndDelete(serviceId);
+    // delete in cloudinary
+    const imagePublicUrl = serviceExist.serviceBannerUrl;
+    if (imagePublicUrl) {
+      let urlPart = imagePublicUrl.split("/");
+      let publicId = urlPart[urlPart.length - 1].split(".")[0];
+      const cloudDeleteion = await cloudinaryDestroy(publicId);
+      if (!cloudDeleteion.success) {
+        return next(createError(500, cloudDeleteion.message));
+      }
+    }
+    // delete serviceId folder
+    const filepath = servicesDefaultDir + serviceId;
+    fse.removeSync(filepath);
+    // completed
+    return res.status(200).json({
+      code: 1,
+      success: true,
+      message: `ServiceId ${serviceId} Deleted!`,
+      data: serviceDeleted,
+    });
   } catch (error) {
     return next(createError(500, error.message));
+  }
+};
+// Update Service Image:
+module.exports.updateServiceImageById = async (req, res, next) => {
+  const { serviceId } = req.params;
+  try {
+    let serviceExist = await ServicesModel.findById(serviceId);
+    if (!serviceExist) {
+      // delete file from tempDir if serviceId is not found
+      fse.removeSync(res.locals.path);
+      return next(createError(404, `ServiceId ${serviceId} Not Found!`));
+    }
+    // move image from tempDir to mainDir
+    const src = servicesTempDir + res.locals.filename;
+    const dest =
+      servicesDefaultDir + serviceExist._id + "/" + res.locals.filename;
+    await fse.move(src, dest);
+    // update path for delete file, must be located here after moving file
+    res.locals.path = dest;
+    // upload image to cloudinary
+    const cloudinaryUploadResult = await cloudinaryUploader(dest);
+    if (!cloudinaryUploadResult.success) {
+      return next(createError(500, cloudinaryUploadResult.message));
+    }
+    // delete old image in cloudinary
+    const imagePublicUrl = serviceExist.serviceBannerUrl;
+    if (imagePublicUrl) {
+      let urlPart = imagePublicUrl.split("/");
+      let publicId = urlPart[urlPart.length - 1].split(".")[0];
+      const cloudDeleteion = await cloudinaryDestroy(publicId);
+      if (!cloudDeleteion.success) {
+        return next(createError(500, cloudDeleteion.message));
+      }
+    }
+    // update new image url
+    serviceExist.serviceBannerUrl = cloudinaryUploadResult.result.url;
+    const result = await serviceExist.save();
+    // completed
+    return res.status(200).json({
+      code: 1,
+      success: true,
+      message: `New Image ${serviceId} Updated!`,
+      data: result,
+    });
+  } catch (error) {
+    return next(createError(500, error.message));
+  } finally {
+    // delete file from system
+    const filepath = res.locals.path;
+    fse.removeSync(filepath);
   }
 };
