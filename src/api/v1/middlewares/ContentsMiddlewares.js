@@ -152,6 +152,8 @@ module.exports.deleteContentById = async (req, res, next) => {
     // delete folder
     const filePath = contentsDefaultDir + contentId;
     fse.removeSync(filePath);
+    // delete service referencing
+
     return res.status(200).json({
       code: 1,
       success: true,
