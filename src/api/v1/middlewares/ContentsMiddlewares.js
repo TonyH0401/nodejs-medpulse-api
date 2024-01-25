@@ -42,6 +42,13 @@ module.exports.createContentsFileMulter = (req, res, next) => {
     } else if (err) {
       return res.status(500).json({ error: err.message });
     }
+    if (!req.file) {
+      return res.status(400).json({
+        code: 0,
+        success: false,
+        error: "There is no file to upload!",
+      });
+    }
     res.locals.filename = req.file.filename;
     return next();
   });
@@ -155,4 +162,77 @@ module.exports.deleteContentById = async (req, res, next) => {
     return next(createError(500, error.message));
   }
 };
-
+// Update Content By Id (Text Only):
+module.exports.editContentById = async (req, res, next) => {
+  const { contentId } = req.params;
+  const { contentCaption, contentBody } = req.body;
+  try {
+    let contentExist = await ContentsModel.findById(contentId);
+    if (!contentExist)
+      return next(createError(404, `ContentId ${contentId} Not Found!`));
+    contentExist.contentCaption = contentCaption || contentExist.contentCaption;
+    contentExist.contentBody = contentBody || contentExist.contentBody;
+    const result = await contentExist.save();
+    return res.status(200).json({
+      code: 1,
+      success: false,
+      message: `ContentId ${contentId} Edited!`,
+      data: result,
+    });
+  } catch (error) {
+    return next(createError(500, error.message));
+  }
+};
+// Update Content Image By Id:
+module.exports.editContentImgById = async (req, res, next) => {
+  const { contentId } = req.params;
+  try {
+    // upload file to tempDir using multer
+    // find content
+    let contentExist = await ContentsModel.findById(contentId);
+    if (!contentExist) {
+      // remove file from tempDir if content is not found
+      let fileName = res.locals.filename;
+      let filePath = contentsTempDir + fileName;
+      fse.removeSync(filePath);
+      return next(createError(404, `ContentId ${contentId} Not Found!`));
+    }
+    // move file from tempDir to mainDir
+    const filename = res.locals.filename;
+    const src = contentsTempDir + filename;
+    const dest = contentsDefaultDir + contentId + "/" + filename;
+    await fse.move(src, dest);
+    // create filepath in res.locals to delete file from system later
+    res.locals.filepath = dest;
+    // upload new image to cloudinary
+    const cloudinaryResult = await cloudinaryUploader(dest);
+    if (!cloudinaryResult.success) {
+      return next(createError(500, cloudinaryResult.message));
+    }
+    // destroy old image on cloudinary
+    const imagePublicUrl = contentExist.contentImageUrl;
+    if (imagePublicUrl) {
+      let urlPart = imagePublicUrl.split("/");
+      let publicId = urlPart[urlPart.length - 1].split(".")[0];
+      const cloudDeleteion = await cloudinaryDestroy(publicId);
+      if (!cloudDeleteion.success) {
+        return next(createError(500, cloudDeleteion.message));
+      }
+    }
+    // update new imageUrl to database
+    contentExist.contentImageUrl = cloudinaryResult.result.url;
+    const result = await contentExist.save();
+    return res.status(200).json({
+      code: 1,
+      success: true,
+      message: `New Image ${contentId} Updated!`,
+      data: result,
+    });
+  } catch (error) {
+    return next(createError(500, error.message));
+  } finally {
+    // delete file from system
+    const filepath = res.locals.filepath;
+    fse.removeSync(filepath);
+  }
+};

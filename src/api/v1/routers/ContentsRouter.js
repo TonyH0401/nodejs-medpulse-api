@@ -9,6 +9,8 @@ const {
   getAllContents,
   getContentById,
   deleteContentById,
+  editContentById,
+  editContentImgById,
 } = require("../middlewares/ContentsMiddlewares");
 // Contents Routers:
 //
@@ -20,8 +22,12 @@ router
 router
   .route("/content/:contentId")
   .get(getContentById)
-  .patch()
+  .patch(editContentById)
   .delete(deleteContentById);
+//   
+router
+  .route("/content/:contentId/update-image")
+  .patch(createContentsFileMulter, editContentImgById);
 // Contents Error Handling:
 router
   .use((req, res, next) => {
