@@ -176,7 +176,7 @@ module.exports.editContentById = async (req, res, next) => {
     const result = await contentExist.save();
     return res.status(200).json({
       code: 1,
-      success: false,
+      success: true,
       message: `ContentId ${contentId} Edited!`,
       data: result,
     });
