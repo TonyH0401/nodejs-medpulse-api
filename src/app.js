@@ -3,6 +3,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const createError = require("http-errors");
 const path = require("path");
+const cors = require("cors");
 // Custom Utils:
 const { reqLoggerDev, reqLoggerTiny } = require("./utils/reqLogger");
 const { connectMongoDB } = require("./database/mongoose");
@@ -16,6 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(reqLoggerDev);
+app.use(cors());
 // Default Route:
 app.get("/", (req, res) => {
   return res.status(200).json({
