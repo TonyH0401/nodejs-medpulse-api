@@ -25,6 +25,7 @@ npm run api
 ### Version 1.01
 * Update and fix middleware, remove deprecated middlewares and function for Pricings, Contents, Services, Users, Accounts and Posts.
 * Update Postman.
+* Initialize api version 2.
 ### Version 1.00
 * Created Medpulse Backend API Version 1.
 * Completed Routes: Pricings, Contents, Services, Users, Accounts and Posts.
