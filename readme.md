@@ -1,5 +1,5 @@
 # Medpulse - Backend  API
-## Version 1.0
+## Version 1.01
 
 ## Medpulse API Documentation
 Postman: https://documenter.getpostman.com/view/23243291/2s9YyqiMnB
@@ -20,3 +20,12 @@ npm i
 npm i nodemon --save-dev
 npm run api
 ```
+
+## Update Log
+### Version 1.01
+* Update and fix middleware, remove deprecated middlewares and function for Pricings, Contents, Services, Users, Accounts and Posts.
+* Update Postman.
+### Version 1.00
+* Created Medpulse Backend API Version 1.
+* Completed Routes: Pricings, Contents, Services, Users, Accounts and Posts.
+* Created Postman documentation.
