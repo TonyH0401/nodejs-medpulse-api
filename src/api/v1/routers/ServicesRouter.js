@@ -3,30 +3,30 @@ const createError = require("http-errors");
 // Custom Utils:
 // Custom Middlewares:
 const {
-  uploadCreateService,
+  uploadFileMulter,
   createService,
   getAllServices,
   getServiceById,
   updateServiceById,
   deleteServiceById,
-  updateServiceImageById,
 } = require("../middlewares/ServicesMiddlewares");
 // Services Routers:
 //
 router
   .route("/service")
-  .get(getAllServices)
-  .post(uploadCreateService, createService);
+  .post(uploadFileMulter, createService)
+  .get(getAllServices);
 //
 router
   .route("/service/:serviceId")
   .get(getServiceById)
-  .patch(updateServiceById)
+  .patch(uploadFileMulter, updateServiceById)
   .delete(deleteServiceById);
-// update image
-router
-  .route("/service/:serviceId/update-image")
-  .patch(uploadCreateService, updateServiceImageById);
+//   .delete(deleteServiceById);
+// // update image
+// router
+//   .route("/service/:serviceId/update-image")
+//   .patch(uploadCreateService, updateServiceImageById);
 // Contents Error Handling:
 router
   .use((req, res, next) => {

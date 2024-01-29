@@ -10,7 +10,7 @@ const ContentsModel = new Schema(
   },
   { timestamps: true }
 );
-//Pre Operations (Triggers):
+// Pre Operations (Triggers):
 const ServicesModel = require("../models/ServicesModel");
 ContentsModel.pre("findOneAndDelete", async function (next) {
   try {

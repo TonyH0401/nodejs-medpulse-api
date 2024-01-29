@@ -41,19 +41,19 @@ module.exports.uploadFileMulter = (req, res, next) => {
     return next();
   });
 };
-// Create New Content:
+// Create Post:
 module.exports.createPost = async (req, res, next) => {
   const { postTitle, postSubTitle, postBody, postAuthor } = req.body;
   try {
     // create new Post
-    let newPost = new PostsModel({
-      postTitle: postTitle,
-      postSubTitle: postSubTitle,
-      postBody: postBody,
+    let postNew = new PostsModel({
+      postTitle: postTitle || "",
+      postSubTitle: postSubTitle || "",
+      postBody: postBody || "",
       postAuthor: (await UsersModel.findById(postAuthor)) || null,
       attachedFiles: "",
     });
-    let postCreated = await newPost.save();
+    let postCreated = await postNew.save();
     // create folder for file
     await createPath(postsDefaultDir, postCreated._id);
     // check if upload file exist
@@ -73,10 +73,11 @@ module.exports.createPost = async (req, res, next) => {
     return res.status(200).json({
       code: 1,
       success: true,
-      message: "New Post Created!",
+      message: "Post Created!",
       data: postCreated,
     });
   } catch (error) {
+    // delete file from system
     if (res.locals.fileExist) fse.removeSync(res.locals.path);
     return next(createError(500, error.message));
   }
@@ -84,13 +85,13 @@ module.exports.createPost = async (req, res, next) => {
 // Get All Posts:
 module.exports.getAllPosts = async (req, res, next) => {
   try {
-    const allPosts = await PostsModel.find({}).populate("postAuthor");
+    const postAll = await PostsModel.find({}).populate("postAuthor");
     return res.status(200).json({
       code: 1,
       success: true,
-      message: "List of all Posts!",
-      total: allPosts.length,
-      data: allPosts,
+      message: "All Posts!",
+      counter: postAll.length,
+      data: postAll,
     });
   } catch (error) {
     return next(createError(500, error.message));
@@ -118,17 +119,24 @@ module.exports.updatePostById = async (req, res, next) => {
   const { postId } = req.params;
   const { postTitle, postSubTitle, postBody, postAuthor } = req.body;
   try {
+    // check if post exist
     let postExist = await PostsModel.findById(postId);
-    if (!postExist)
+    // handle if post doesn't exist
+    if (!postExist) {
+      // if post doesn'texist, delete file in tempDIr
+      if (res.locals.fileExist) fse.removeSync(res.locals.path);
       return next(createError(404, `PostId ${postId} Not Found!`));
+    }
+    // update post
     postExist.postTitle = postTitle || postExist.postTitle;
     postExist.postSubTitle = postSubTitle || postExist.postSubTitle;
     postExist.postBody = postBody || postExist.postBody;
     postExist.postAuthor =
       (await UsersModel.findById(postAuthor)) || postExist.postAuthor;
     await postExist.save();
+    // check if file is uploaded
     if (res.locals.fileExist) {
-      // delete the existed file
+      // delete the existed old file
       fse.removeSync(postExist.attachedFiles);
       // move file from temp dir to main dir
       const src = postsTempDir + res.locals.filename;
@@ -140,12 +148,13 @@ module.exports.updatePostById = async (req, res, next) => {
       postExist.attachedFiles = dest;
       await postExist.save();
     }
-    const result = await postExist.populate("postAuthor");
+    // completed
+    const postUpdated = await postExist.populate("postAuthor");
     return res.status(200).json({
       code: 1,
       success: true,
       message: `:PostId ${postId} Edited!`,
-      data: result,
+      data: postUpdated,
     });
   } catch (error) {
     if (res.locals.fileExist) fse.removeSync(res.locals.path);
@@ -163,6 +172,7 @@ module.exports.deletePostById = async (req, res, next) => {
     const deletedPost = await PostsModel.findByIdAndDelete(postId);
     // delete folder
     fse.removeSync(postsDefaultDir + postId);
+    // completed
     return res.status(200).json({
       code: 1,
       success: true,

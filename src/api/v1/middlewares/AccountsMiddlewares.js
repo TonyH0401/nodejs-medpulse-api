@@ -11,22 +11,22 @@ const UsersModel = require("../models/UsersModel");
 module.exports.createAccount = async (req, res, next) => {
   const { accountUsername, accountPassword, User } = req.body;
   try {
-    // check if User exist
+    // check if user exist
     const userExist = await UsersModel.findById(User);
-    // create new Account
-    let newAccount = await AccountsModel({
-      accountUsername: accountUsername,
-      accountPassword: accountPassword,
+    if (!userExist) return next(createError(404, `UserId ${User} Not Found!`));
+    // create new account
+    let accountNew = await AccountsModel({
+      accountUsername: accountUsername || userExist.fullName,
+      accountPassword: accountPassword || "admin",
+      User: userExist || null,
     });
-    // if User exist or User is valid then save to Account
-    if (userExist) newAccount.User = userExist;
-    // save new Account
-    const createdAccount = await newAccount.save();
+    // save new account to database
+    const accountCreated = await accountNew.save();
     return res.status(200).json({
       code: 1,
       success: true,
-      message: "New Account Created!",
-      data: createdAccount,
+      message: "Account Created!",
+      data: accountCreated,
     });
   } catch (error) {
     return next(createError(500, error.message));
@@ -35,13 +35,13 @@ module.exports.createAccount = async (req, res, next) => {
 // Get All Accounts (include User binds with the Account):
 module.exports.getAllAccounts = async (req, res, next) => {
   try {
-    const allAccounts = await AccountsModel.find({}).populate("User");
+    const accountAll = await AccountsModel.find({}).populate("User");
     return res.status(200).json({
       code: 1,
       success: true,
       message: "All Accounts!",
-      counter: allAccounts.length,
-      data: allAccounts,
+      counter: accountAll.length,
+      data: accountAll,
     });
   } catch (error) {
     return next(createError(500, error.message));
@@ -67,20 +67,22 @@ module.exports.getAccountById = async (req, res, next) => {
     return next(createError(500, error.message));
   }
 };
-// Update Account By Id: - not done
+// Update Account By Id:
 module.exports.updateAccountById = async (req, res, next) => {
   const { accountId } = req.params;
   const { accountUsername, accountPassword, User } = req.body;
-  console.log(User);
   try {
+    // check if account exist
     let accountExist = await AccountsModel.findById(accountId);
     if (!accountExist)
       return next(createError(404, `AccountId ${accountId} Not Found!`));
+    // update account
     accountExist.accountUsername =
       accountUsername || accountExist.accountUsername;
     accountExist.accountPassword =
       accountPassword || accountExist.accountPassword;
     accountExist.User = (await UsersModel.findById(User)) || accountExist.User;
+    // save account to database
     const updatedAccount = await (await accountExist.save()).populate("User");
     return res.status(200).json({
       code: 1,
@@ -103,7 +105,7 @@ module.exports.deleteAccountById = async (req, res, next) => {
     return res.status(200).json({
       code: 1,
       success: true,
-      message: `Updated AccountId ${accountId}!`,
+      message: `Deleted AccountId ${accountId}!`,
       data: deletedAccount,
     });
   } catch (error) {

@@ -3,9 +3,7 @@ const createError = require("http-errors");
 // Custom Utils:
 // Custom Middlewares:
 const {
-  inputDataExist,
-  inputPricingsValidation,
-  createNewPricing,
+  createPricing,
   getAllPricing,
   getPricingById,
   deletePricingById,
@@ -13,10 +11,7 @@ const {
 } = require("../middlewares/PricingsMiddlewares");
 // Pricings Routers:
 //
-router
-  .route("/pricing")
-  .get(getAllPricing)
-  .post(inputDataExist, inputPricingsValidation, createNewPricing);
+router.route("/pricing").post(createPricing).get(getAllPricing);
 //
 router
   .route("/pricing/:pricingId")

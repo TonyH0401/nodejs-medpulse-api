@@ -3,11 +3,11 @@ const createError = require("http-errors");
 // Custom Utils:
 // Custom Middlewares:
 const {
-  isContentInputEmpty,
-  createContentsFileMulter,
+  uploadFileMulter,
   createContent,
   getAllContents,
   getContentById,
+  updateContentById,
   deleteContentById,
   editContentById,
   editContentImgById,
@@ -16,18 +16,21 @@ const {
 //
 router
   .route("/content")
-  .get(getAllContents)
-  .post(createContentsFileMulter, isContentInputEmpty, createContent);
+  .post(uploadFileMulter, createContent)
+  .get(getAllContents);
 //
 router
   .route("/content/:contentId")
   .get(getContentById)
-  .patch(editContentById)
+  .patch(uploadFileMulter, updateContentById)
   .delete(deleteContentById);
-//   
-router
-  .route("/content/:contentId/update-image")
-  .patch(createContentsFileMulter, editContentImgById);
+
+// .patch(editContentById)
+// .delete(deleteContentById);
+// //
+// router
+//   .route("/content/:contentId/update-image")
+//   .patch(createContentsFileMulter, editContentImgById);
 // Contents Error Handling:
 router
   .use((req, res, next) => {

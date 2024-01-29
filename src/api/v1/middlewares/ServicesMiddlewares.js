@@ -25,7 +25,7 @@ const upload = multer({
   fileFilter: imageOnlyFileFilter,
   limits: fileSize5mb,
 }).single("serviceBannerUrl");
-module.exports.uploadCreateService = (req, res, next) => {
+module.exports.uploadFileMulter = (req, res, next) => {
   upload(req, res, (err) => {
     if (err instanceof multer.MulterError) {
       return res
@@ -37,18 +37,16 @@ module.exports.uploadCreateService = (req, res, next) => {
         .json({ code: 0, success: false, error: err.message });
     }
     if (!req.file) {
-      return res.status(400).json({
-        code: 0,
-        success: false,
-        error: "File Not Found To Upload!",
-      });
+      res.locals.fileExist = false;
+    } else {
+      res.locals.fileExist = true;
+      res.locals.filename = req.file.filename;
+      res.locals.path = req.file.path;
     }
-    res.locals.filename = req.file.filename;
-    res.locals.path = req.file.path;
     return next();
   });
 };
-// Create Services:
+// Create Service:
 module.exports.createService = async (req, res, next) => {
   const { serviceName, Contents } = req.body;
   try {
@@ -64,53 +62,56 @@ module.exports.createService = async (req, res, next) => {
       arrayIds.includes(obj.id)
     );
     // create new Service
-    let newService = new ServicesModel({
-      serviceName: serviceName,
+    let serviceNew = new ServicesModel({
+      serviceName: serviceName || "",
+      serviceBannerUrl: "",
       Contents: matchedObjectId,
     });
-    const createdService = await newService.save();
+    let serviceCreated = await serviceNew.save();
     // create folder to store image
-    await createPath(servicesDefaultDir, createdService._id);
-    // move image from tempDir to mainDir
-    const src = servicesTempDir + res.locals.filename;
-    const dest =
-      servicesDefaultDir + createdService._id + "/" + res.locals.filename;
-    await fse.move(src, dest);
-    // update path for delete file, must be located here after moving file
-    res.locals.path = dest;
-    // upload image to cloudinary
-    const cloudinaryUploadResult = await cloudinaryUploader(dest);
-    if (!cloudinaryUploadResult.success) {
-      return next(createError(500, cloudinaryUploadResult.message));
+    await createPath(servicesDefaultDir, serviceCreated._id);
+    // check if upload file exist
+    if (res.locals.fileExist) {
+      // move image from tempDir to mainDir
+      const src = servicesTempDir + res.locals.filename;
+      const dest =
+        servicesDefaultDir + serviceCreated._id + "/" + res.locals.filename;
+      await fse.move(src, dest);
+      // update path for delete file, must be located here after moving file
+      res.locals.path = dest;
+      // upload image to cloudinary
+      const cloudinaryUploadResult = await cloudinaryUploader(dest);
+      if (!cloudinaryUploadResult.success) {
+        return next(createError(500, cloudinaryUploadResult.message));
+      }
+      // update image url
+      serviceCreated.serviceBannerUrl = cloudinaryUploadResult.result.url;
+      await serviceCreated.save();
     }
-    // update image url
-    createdService.serviceBannerUrl = cloudinaryUploadResult.result.url;
-    const result = await createdService.save();
     // completed
     return res.status(200).json({
       code: 1,
       success: true,
       message: "Service Created!",
-      data: result,
+      data: serviceCreated,
     });
   } catch (error) {
     return next(createError(500, error.message));
   } finally {
     // delete image from system
-    const filepath = res.locals.path;
-    fse.removeSync(filepath);
+    if (res.locals.fileExist) fse.removeSync(res.locals.path);
   }
 };
 // Get All Services:
 module.exports.getAllServices = async (req, res, next) => {
   try {
-    const allServices = await ServicesModel.find({}).populate("Contents");
+    const serviceAll = await ServicesModel.find({}).populate("Contents");
     return res.status(200).json({
       code: 1,
       success: true,
-      counter: allServices.length,
-      message: "All Services",
-      data: allServices,
+      counter: serviceAll.length,
+      message: "All Services!",
+      data: serviceAll,
     });
   } catch (error) {
     return next(createError(500, error.message));
@@ -135,11 +136,12 @@ module.exports.getServiceById = async (req, res, next) => {
     return next(createError(500, error.message));
   }
 };
-// Update Service By Id (do not update image): allow add and remove content
+// Update Service By Id: should allow add and remove content
 module.exports.updateServiceById = async (req, res, next) => {
   const { serviceId } = req.params;
   const { serviceName, Contents } = req.body;
   try {
+    // check if service exist
     let serviceExist = await ServicesModel.findById(serviceId);
     if (!serviceExist)
       return next(createError(404, `ServiceId ${serviceId} Not Found!`));
@@ -154,20 +156,50 @@ module.exports.updateServiceById = async (req, res, next) => {
     const matchedObjectId = allContents.filter((obj) =>
       arrayIds.includes(obj.id)
     );
-    // update serviceExist
+    // update service to database
     serviceExist.serviceName = serviceName || serviceExist.serviceName;
     serviceExist.Contents = matchedObjectId;
-    // update to database
-    let result = await serviceExist.save();
+    let serviceUpdated = await serviceExist.save();
+    // check if upload file exist
+    if (res.locals.fileExist) {
+      // move image from tempDir to mainDir
+      const src = servicesTempDir + res.locals.filename;
+      const dest =
+        servicesDefaultDir + serviceExist._id + "/" + res.locals.filename;
+      await fse.move(src, dest);
+      // update path for delete file, must be located here after moving file
+      res.locals.path = dest;
+      // upload image to cloudinary
+      const cloudinaryUploadResult = await cloudinaryUploader(dest);
+      if (!cloudinaryUploadResult.success) {
+        return next(createError(500, cloudinaryUploadResult.message));
+      }
+      // delete old image in cloudinary
+      const imagePublicUrl = serviceExist.serviceBannerUrl;
+      if (imagePublicUrl) {
+        let urlPart = imagePublicUrl.split("/");
+        let publicId = urlPart[urlPart.length - 1].split(".")[0];
+        const cloudDeleteion = await cloudinaryDestroy(publicId);
+        if (!cloudDeleteion.success) {
+          return next(createError(500, cloudDeleteion.message));
+        }
+      }
+      // update new image url
+      serviceUpdated.serviceBannerUrl = cloudinaryUploadResult.result.url;
+      await serviceUpdated.save();
+    }
     // completed
     return res.status(200).json({
       code: 1,
       success: true,
-      message: `Updated ${serviceId}!`,
-      data: result,
+      message: `Updated ServiceId ${serviceId}!`,
+      data: serviceUpdated,
     });
   } catch (error) {
     return next(createError(500, error.message));
+  } finally {
+    // delete file from system
+    if (res.locals.fileExist) fse.removeSync(res.locals.path);
   }
 };
 // Delete Service By Id (this do not delete content because 1 content can be part of multiple service):
@@ -196,60 +228,10 @@ module.exports.deleteServiceById = async (req, res, next) => {
     return res.status(200).json({
       code: 1,
       success: true,
-      message: `ServiceId ${serviceId} Deleted!`,
+      message: `Deleted ServiceId ${serviceId}!`,
       data: serviceDeleted,
     });
   } catch (error) {
     return next(createError(500, error.message));
-  }
-};
-// Update Service Image:
-module.exports.updateServiceImageById = async (req, res, next) => {
-  const { serviceId } = req.params;
-  try {
-    let serviceExist = await ServicesModel.findById(serviceId);
-    if (!serviceExist) {
-      // delete file from tempDir if serviceId is not found
-      fse.removeSync(res.locals.path);
-      return next(createError(404, `ServiceId ${serviceId} Not Found!`));
-    }
-    // move image from tempDir to mainDir
-    const src = servicesTempDir + res.locals.filename;
-    const dest =
-      servicesDefaultDir + serviceExist._id + "/" + res.locals.filename;
-    await fse.move(src, dest);
-    // update path for delete file, must be located here after moving file
-    res.locals.path = dest;
-    // upload image to cloudinary
-    const cloudinaryUploadResult = await cloudinaryUploader(dest);
-    if (!cloudinaryUploadResult.success) {
-      return next(createError(500, cloudinaryUploadResult.message));
-    }
-    // delete old image in cloudinary
-    const imagePublicUrl = serviceExist.serviceBannerUrl;
-    if (imagePublicUrl) {
-      let urlPart = imagePublicUrl.split("/");
-      let publicId = urlPart[urlPart.length - 1].split(".")[0];
-      const cloudDeleteion = await cloudinaryDestroy(publicId);
-      if (!cloudDeleteion.success) {
-        return next(createError(500, cloudDeleteion.message));
-      }
-    }
-    // update new image url
-    serviceExist.serviceBannerUrl = cloudinaryUploadResult.result.url;
-    const result = await serviceExist.save();
-    // completed
-    return res.status(200).json({
-      code: 1,
-      success: true,
-      message: `New Image ${serviceId} Updated!`,
-      data: result,
-    });
-  } catch (error) {
-    return next(createError(500, error.message));
-  } finally {
-    // delete file from system
-    const filepath = res.locals.path;
-    fse.removeSync(filepath);
   }
 };
