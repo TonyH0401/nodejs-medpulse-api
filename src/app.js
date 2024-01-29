@@ -29,6 +29,8 @@ app.get("/", (req, res) => {
 // API Routers:
 const v1API = require("./api/v1/routers/index");
 app.use("/api/v1", v1API);
+// const v2API = require("./api/v2/routes");
+// app.use("/api/v2", v2API);
 // Default Error Handling:
 app.use((req, res, next) => {
   next(createError(404, "This directory does not exist!"));
