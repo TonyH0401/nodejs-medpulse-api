@@ -21,6 +21,17 @@ npm i nodemon --save-dev
 npm run api
 ```
 
+## Environment Variables:
+
+```sh
+API_PORT=""
+MONGODB=""
+MONGODBV2=""
+CLOUDINARY_CLOUD_NAME=""
+CLOUDINARY_API_KEY=""
+CLOUDINARY_API_SECRET=""
+```
+
 ## Update Log
 ### Version 1.01
 * Update and fix middleware, remove deprecated middlewares and function for Pricings, Contents, Services, Users, Accounts and Posts.
